@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>True Earnings Calculator (UK)</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 860px; margin: 28px auto; padding: 0 14px; line-height: 1.35; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 920px; margin: 28px auto; padding: 0 14px; line-height: 1.35; }
     h1 { font-size: 22px; margin: 0 0 8px; }
     .sub { color:#666; font-size: 13px; margin-bottom: 14px; }
     .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin: 12px 0; }
@@ -21,7 +21,7 @@
     .warn { background: #fff6e5; border: 1px solid #ffd08a; padding: 10px; border-radius: 10px; margin-top: 10px; }
     .err { background: #ffecec; border: 1px solid #ffb3b3; padding: 10px; border-radius: 10px; margin-top: 10px; }
     table { width:100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th, td { border-bottom:1px solid #eee; padding: 8px; text-align:left; vertical-align: top; }
+    th, td { border-bottom:1px solid #eee; padding: 8px; text-align:left; }
     th { background:#fafafa; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
@@ -29,24 +29,23 @@
 <body>
   <h1>True Earnings Calculator (UK)</h1>
   <div class="sub">
-    England/Wales/NI income tax. Ignores carry forward and does not include National Insurance.
-    Educational only, not financial advice.
+    England, Wales and Northern Ireland rules for 2025/26. Includes Income Tax and Class 1 National Insurance assuming category A.
+    Assumes pension contributions reduce taxable pay (salary sacrifice or net pay). Carry forward is not included. Educational use only.
   </div>
 
   <div class="card">
     <h2 style="margin:0 0 10px; font-size:16px;">Inputs</h2>
+
     <div class="grid">
       <div>
         <label for="grossIncome">Gross income (£/year)</label>
         <input id="grossIncome" type="number" min="0" step="100" placeholder="e.g. 160000" />
-        <div class="hint">Use annual gross income (employment or total taxable income you want to model).</div>
+        <div class="hint">Your total annual income before Income Tax and National Insurance.</div>
       </div>
       <div>
-        <label for="pension">Pension contribution this tax year (£)</label>
+        <label for="pension">Employee pension contribution (£/year)</label>
         <input id="pension" type="number" min="0" step="100" placeholder="e.g. 60000" />
-        <div class="hint">
-          Assumes contributions reduce taxable income (salary sacrifice / net pay). Relief-at-source works differently.
-        </div>
+        <div class="hint">Hard cap: this calculator will not run if employee pension exceeds £60,000 (carry forward ignored).</div>
       </div>
     </div>
 
@@ -54,17 +53,11 @@
 
     <div class="grid">
       <div>
-        <label for="otherDeductions">Other deductions reducing taxable income (optional) (£)</label>
-        <input id="otherDeductions" type="number" min="0" step="100" placeholder="0" />
-        <div class="hint">Optional. Leave blank if not relevant.</div>
-      </div>
-      <div>
-        <label for="employerPension">Employer pension contribution (optional) (£)</label>
+        <label for="employerPension">Employer pension contribution (£/year, optional)</label>
         <input id="employerPension" type="number" min="0" step="100" placeholder="0" />
-        <div class="hint">
-          Used only for tapered annual allowance check (adjusted income approximation) and for total wealth calculation display.
-        </div>
+        <div class="hint">Included in “true earnings” as additional value generated.</div>
       </div>
+      <div></div>
     </div>
 
     <div style="height:12px;"></div>
@@ -76,7 +69,7 @@
     <div id="results" style="display:none;">
       <div class="kpis">
         <div class="kpi">
-          <div class="name">Taxable income (after deductions)</div>
+          <div class="name">Taxable income (after allowances)</div>
           <div class="val" id="kpiTaxable">£0</div>
         </div>
         <div class="kpi">
@@ -84,19 +77,19 @@
           <div class="val" id="kpiTax">£0</div>
         </div>
         <div class="kpi">
-          <div class="name">Take-home after income tax (no NI)</div>
-          <div class="val" id="kpiTakeHome">£0</div>
+          <div class="name">Employee NI (Class 1, A)</div>
+          <div class="val" id="kpiEmpNI">£0</div>
         </div>
       </div>
 
       <div class="kpis">
         <div class="kpi">
-          <div class="name">Pension added (employee + employer)</div>
-          <div class="val" id="kpiPension">£0</div>
+          <div class="name">Take-home pay (after tax + employee NI)</div>
+          <div class="val" id="kpiTakeHome">£0</div>
         </div>
         <div class="kpi">
-          <div class="name">Total wealth generated (with pension)</div>
-          <div class="val" id="kpiWealth">£0</div>
+          <div class="name">Employer NI (Class 1, A)</div>
+          <div class="val" id="kpiErNI">£0</div>
         </div>
         <div class="kpi">
           <div class="name">Personal allowance used</div>
@@ -104,18 +97,51 @@
         </div>
       </div>
 
+      <h3 style="margin:14px 0 6px; font-size:14px;">True earnings comparison</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Taxable income</th>
+            <th>Income tax</th>
+            <th>Total income generated</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td id="rowA_taxable">£0</td>
+            <td id="rowA_tax">£0</td>
+            <td id="rowA_income">£0</td>
+          </tr>
+          <tr>
+            <td id="rowB_taxable">£0</td>
+            <td id="rowB_tax">£0</td>
+            <td id="rowB_income">£0</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td><strong id="rowDelta_income">£0</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="sub">
+        Row 1: no employee pension contribution (baseline). Row 2: after pension contributions.
+        “Total income generated” = take-home after tax + employee NI, plus pension contributions (employee + employer).
+      </div>
+
       <div class="kpis">
         <div class="kpi">
-          <div class="name">Take-home if pension = £0 (no NI)</div>
-          <div class="val" id="kpiTakeHomeNoPension">£0</div>
+          <div class="name">Total pension added (employee + employer)</div>
+          <div class="val" id="kpiPension">£0</div>
         </div>
         <div class="kpi">
-          <div class="name">Wealth if pension = £0</div>
-          <div class="val" id="kpiWealthNoPension">£0</div>
+          <div class="name">True earnings (take-home + pension)</div>
+          <div class="val" id="kpiTrueEarnings">£0</div>
         </div>
         <div class="kpi">
-          <div class="name">Wealth uplift from pension</div>
-          <div class="val" id="kpiWealthDelta">£0</div>
+          <div class="name">True earnings uplift from pension</div>
+          <div class="val" id="kpiDelta">£0</div>
         </div>
       </div>
 
@@ -131,33 +157,53 @@
             </tr>
           </thead>
           <tbody id="breakdownBody"></tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              <th id="breakdownTotalTaxed">£0</th>
+              <th></th>
+              <th id="breakdownTotalTax">£0</th>
+            </tr>
+          </tfoot>
         </table>
+
         <div class="sub" style="margin-top:10px;">
-          Personal Allowance is £12,570, reduced by £1 for every £2 of income above £100,000, and becomes £0 at £125,140.
-          Annual allowance tapering is approximated (see notes).
+          Personal Allowance is £12,570, reduced by £1 for every £2 of income above £100,000, and fully withdrawn at £125,140.
+          Employee NI is calculated using weekly thresholds; this is an annual approximation.
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // 2025/26 England/Wales/NI income tax (non-savings, non-dividend) bands.
+    // 2025/26 Income Tax (England/Wales/NI)
     const RULES_2025_26 = {
       personalAllowance: 12570,
       paTaperStart: 100000,
       paZeroAt: 125140,
-      // Bands expressed on "taxable income after allowances".
       bandsAfterAllowances: [
-        { name: "Basic rate",    from: 0,     to: 37700,  rate: 0.20 },
-        { name: "Higher rate",   from: 37700, to: 125140, rate: 0.40 },
+        { name: "Basic rate",    from: 0,       to: 37700,    rate: 0.20 },
+        { name: "Higher rate",   from: 37700,   to: 125140,   rate: 0.40 },
         { name: "Additional",    from: 125140, to: Infinity, rate: 0.45 }
       ],
-      // Pension annual allowance (standard) and taper rules (2025/26 assumption).
       pension: {
         standardAnnualAllowance: 60000,
-        taperThreshold: 200000,        // "threshold income" reference (approx)
-        adjustedIncomeLimit: 260000,   // if adjusted income exceeds this, taper applies
-        minAnnualAllowance: 10000      // minimum tapered annual allowance
+        // Approx tapered annual allowance check (HMRC definitions use threshold + adjusted income).
+        taperThreshold: 200000,
+        adjustedIncomeLimit: 260000,
+        minAnnualAllowance: 10000
+      },
+      // 2025/26 NI Category A (Class 1)
+      ni: {
+        // Employee (primary) thresholds/rates (weekly)
+        primaryThresholdWeekly: 242,   // PT
+        upperEarningsLimitWeekly: 967, // UEL
+        mainRate: 0.08,
+        addlRate: 0.02,
+
+        // Employer (secondary) threshold/rate (weekly)
+        secondaryThresholdWeekly: 96,  // ST
+        employerRate: 0.15
       }
     };
 
@@ -174,16 +220,14 @@
       return clamp(Number(v));
     }
 
-    // Personal allowance taper for 2025/26.
     function calcPersonalAllowance(grossIncome, rules) {
       const pa = rules.personalAllowance;
       if (grossIncome <= rules.paTaperStart) return pa;
       if (grossIncome >= rules.paZeroAt) return 0;
-      const reduction = (grossIncome - rules.paTaperStart) / 2; // £1 for every £2
+      const reduction = (grossIncome - rules.paTaperStart) / 2;
       return Math.max(0, pa - reduction);
     }
 
-    // Apply banded income tax to "taxable income after allowances".
     function calcIncomeTax(taxableAfterAllowances, rules) {
       let remaining = clamp(taxableAfterAllowances);
       let tax = 0;
@@ -191,30 +235,40 @@
 
       for (const band of rules.bandsAfterAllowances) {
         if (remaining <= 0) break;
-
         const bandWidth = (band.to === Infinity) ? Infinity : (band.to - band.from);
         const taxedAmount = Math.min(remaining, bandWidth);
-
         const bandTax = taxedAmount * band.rate;
         tax += bandTax;
-
-        breakdown.push({
-          band: band.name,
-          amount: taxedAmount,
-          rate: band.rate,
-          tax: bandTax
-        });
-
+        breakdown.push({ band: band.name, amount: taxedAmount, rate: band.rate, tax: bandTax });
         remaining -= taxedAmount;
       }
       return { tax, breakdown };
     }
 
-    // Tapered annual allowance (approximation).
-    // Actual HMRC definitions use "threshold income" and "adjusted income".
-    // Here we approximate:
-    // - thresholdIncome ≈ grossIncome - employeePension (salary sacrifice reduces)
-    // - adjustedIncome ≈ grossIncome + employerPension (broadly adds employer contrib)
+    // NI approximation: treat annual earnings as evenly earned across 52 weeks.
+    function calcEmployeeNI_Annual(grossAnnual, employeePensionAnnual, rules) {
+      const ni = rules.ni;
+      const annualPayForNI = Math.max(0, grossAnnual - employeePensionAnnual); // salary sacrifice reduces NI too
+      const weekly = annualPayForNI / 52;
+
+      const mainBand = Math.max(0, Math.min(weekly, ni.upperEarningsLimitWeekly) - ni.primaryThresholdWeekly);
+      const addlBand = Math.max(0, weekly - ni.upperEarningsLimitWeekly);
+
+      const weeklyNI = (mainBand * ni.mainRate) + (addlBand * ni.addlRate);
+      return weeklyNI * 52;
+    }
+
+    function calcEmployerNI_Annual(grossAnnual, employeePensionAnnual, rules) {
+      const ni = rules.ni;
+      const annualPayForNI = Math.max(0, grossAnnual - employeePensionAnnual); // salary sacrifice reduces employer NI too
+      const weekly = annualPayForNI / 52;
+
+      const band = Math.max(0, weekly - ni.secondaryThresholdWeekly);
+      const weeklyNI = band * ni.employerRate;
+      return weeklyNI * 52;
+    }
+
+    // Approx tapered annual allowance. Conservative: warn + block if employee pension exceeds estimated allowance.
     function calcAnnualAllowanceApprox(grossIncome, employeePension, employerPension, rules) {
       const p = rules.pension;
       let allowance = p.standardAnnualAllowance;
@@ -222,11 +276,9 @@
       const thresholdIncome = Math.max(0, grossIncome - employeePension);
       const adjustedIncome = Math.max(0, grossIncome + employerPension);
 
-      // Taper applies only if BOTH conditions met in typical HMRC framing:
-      // threshold income > £200k and adjusted income > £260k.
       if (thresholdIncome > p.taperThreshold && adjustedIncome > p.adjustedIncomeLimit) {
         const excess = adjustedIncome - p.adjustedIncomeLimit;
-        const reduction = Math.floor(excess / 2); // £1 reduction per £2 excess
+        const reduction = Math.floor(excess / 2);
         allowance = Math.max(p.minAnnualAllowance, p.standardAnnualAllowance - reduction);
       }
       return { allowance, thresholdIncome, adjustedIncome };
@@ -240,20 +292,39 @@
       document.getElementById("warnings").innerHTML = "";
       document.getElementById("results").style.display = "none";
     }
-
     function clearError() {
       const e = document.getElementById("errorBox");
       e.style.display = "none";
       e.innerHTML = "";
     }
 
+    function calculateScenario(grossIncome, employeePension, employerPension, rules) {
+      // Income Tax
+      const personalAllowance = calcPersonalAllowance(grossIncome, rules);
+      const taxableBeforePA = Math.max(0, grossIncome - employeePension);
+      const taxableAfterPA = Math.max(0, taxableBeforePA - personalAllowance);
+      const { tax, breakdown } = calcIncomeTax(taxableAfterPA, rules);
+
+      // NI
+      const empNI = calcEmployeeNI_Annual(grossIncome, employeePension, rules);
+      const erNI = calcEmployerNI_Annual(grossIncome, employeePension, rules);
+
+      // Take-home after Income Tax + employee NI (and after pension via salary sacrifice)
+      const takeHome = grossIncome - employeePension - tax - empNI;
+
+      // True earnings: take-home + pension added (employee + employer)
+      const totalPensionAdded = employeePension + employerPension;
+      const trueEarnings = takeHome + totalPensionAdded;
+
+      return { personalAllowance, taxableAfterPA, tax, breakdown, empNI, erNI, takeHome, totalPensionAdded, trueEarnings };
+    }
+
     function calculate() {
       const rules = RULES_2025_26;
 
       const grossIncome = parseMoney("grossIncome");
-      const pension = parseMoney("pension"); // employee pension
+      const pension = parseMoney("pension");
       const employerPension = parseMoney("employerPension");
-      const otherDeductions = parseMoney("otherDeductions");
 
       clearError();
 
@@ -262,56 +333,31 @@
         return;
       }
 
-      // if pension > 60k, do not calculate.
+      // Hard rule: if pension > 60k, stop
       if (pension > rules.pension.standardAnnualAllowance) {
-        showError(`Pension contribution exceeds £60,000. This calculator ignores carry forward. Reduce pension to £60,000 or less to calculate.`);
+        showError("Employee pension contribution exceeds £60,000. This calculator ignores carry forward. Reduce pension to £60,000 or less.");
         return;
       }
 
       const warnings = [];
 
-      // Tapered allowance approximation and check (only for warning + eligibility).
+      // Tapered allowance approximation: warn and block if employee pension exceeds estimated allowance
       const taper = calcAnnualAllowanceApprox(grossIncome, pension, employerPension, rules);
       if (taper.allowance < rules.pension.standardAnnualAllowance) {
-        warnings.push(
-          `Annual allowance may be tapered based on your income. Approx allowance: ${gbp(taper.allowance)} (threshold income ≈ ${gbp(taper.thresholdIncome)}, adjusted income ≈ ${gbp(taper.adjustedIncome)}).`
-        );
-        // If taper makes allowance lower than employee pension, block calculation
+        warnings.push(`Annual allowance may be tapered at higher incomes. Estimated allowance: ${gbp(taper.allowance)}.`);
         if (pension > taper.allowance) {
-          showError(`Your entered pension (${gbp(pension)}) exceeds the estimated tapered annual allowance (${gbp(taper.allowance)}). Adjust inputs or seek advice. This tool will not calculate in this case.`);
+          showError(`Your employee pension (${gbp(pension)}) exceeds the estimated tapered annual allowance (${gbp(taper.allowance)}). This tool will not calculate in this case.`);
           return;
         }
       }
 
-      // Taxable income before personal allowance: gross minus deductions that reduce taxable income.
-      // (We treat employee pension and other deductions as reducing taxable income.)
-      const taxableBeforePA = Math.max(0, grossIncome - pension - otherDeductions);
+      // Scenario A (baseline): no employee pension
+      const A = calculateScenario(grossIncome, 0, employerPension, rules);
 
-      const personalAllowance = calcPersonalAllowance(grossIncome, rules);
-      const taxableAfterPA = Math.max(0, taxableBeforePA - personalAllowance);
+      // Scenario B: with employee pension
+      const B = calculateScenario(grossIncome, pension, employerPension, rules);
 
-      const { tax, breakdown } = calcIncomeTax(taxableAfterPA, rules);
-
-      // Take-home after income tax (no NI). Take-home is what's left after tax and employee deductions.
-      const takeHome = grossIncome - tax - pension - otherDeductions;
-
-      // Total pension added (employee + employer) shown (employer doesn't reduce employee take-home here).
-      const totalPensionAdded = pension + employerPension;
-
-      // Wealth generated with pension = take-home + total pension added.
-      const wealthGenerated = takeHome + totalPensionAdded;
-
-      // Scenario: no pension contribution (employee pension = 0) to show comparison.
-      const taxableBeforePA_NoPension = Math.max(0, grossIncome - 0 - otherDeductions);
-      const personalAllowance_NoPension = calcPersonalAllowance(grossIncome, rules);
-      const taxableAfterPA_NoPension = Math.max(0, taxableBeforePA_NoPension - personalAllowance_NoPension);
-      const tax_NoPension = calcIncomeTax(taxableAfterPA_NoPension, rules).tax;
-      const takeHome_NoPension = grossIncome - tax_NoPension - 0 - otherDeductions;
-
-      // Wealth with no pension: take-home + employer pension (employer contrib may still exist)
-      const wealth_NoPension = takeHome_NoPension + employerPension;
-
-      const delta = wealthGenerated - wealth_NoPension;
+      const delta = B.trueEarnings - A.trueEarnings;
 
       // Render warnings
       const warnEl = document.getElementById("warnings");
@@ -325,22 +371,36 @@
         warnEl.innerHTML = "";
       }
 
-      // KPIs
-      document.getElementById("kpiTaxable").textContent = gbp(taxableAfterPA);
-      document.getElementById("kpiTax").textContent = gbp(tax);
-      document.getElementById("kpiTakeHome").textContent = gbp(takeHome);
-      document.getElementById("kpiPension").textContent = gbp(totalPensionAdded);
-      document.getElementById("kpiWealth").textContent = gbp(wealthGenerated);
-      document.getElementById("kpiPA").textContent = gbp(personalAllowance);
+      // KPIs (Scenario B)
+      document.getElementById("kpiTaxable").textContent = gbp(B.taxableAfterPA);
+      document.getElementById("kpiTax").textContent = gbp(B.tax);
+      document.getElementById("kpiEmpNI").textContent = gbp(B.empNI);
+      document.getElementById("kpiTakeHome").textContent = gbp(B.takeHome);
+      document.getElementById("kpiErNI").textContent = gbp(B.erNI);
+      document.getElementById("kpiPA").textContent = gbp(B.personalAllowance);
 
-      document.getElementById("kpiTakeHomeNoPension").textContent = gbp(takeHome_NoPension);
-      document.getElementById("kpiWealthNoPension").textContent = gbp(wealth_NoPension);
-      document.getElementById("kpiWealthDelta").textContent = (delta >= 0 ? "+" : "") + gbp(delta);
+      // Comparison table (as requested structure)
+      document.getElementById("rowA_taxable").textContent = gbp(A.taxableAfterPA);
+      document.getElementById("rowA_tax").textContent = gbp(A.tax);
+      document.getElementById("rowA_income").textContent = gbp(A.takeHome); // baseline: take-home after tax + NI
 
-      // Breakdown table
+      document.getElementById("rowB_taxable").textContent = gbp(B.taxableAfterPA);
+      document.getElementById("rowB_tax").textContent = gbp(B.tax);
+      document.getElementById("rowB_income").textContent = gbp(B.trueEarnings); // with pension: take-home + pension
+
+      document.getElementById("rowDelta_income").textContent = (delta >= 0 ? "+" : "") + gbp(delta);
+
+      // True earnings KPIs
+      document.getElementById("kpiPension").textContent = gbp(B.totalPensionAdded);
+      document.getElementById("kpiTrueEarnings").textContent = gbp(B.trueEarnings);
+      document.getElementById("kpiDelta").textContent = (delta >= 0 ? "+" : "") + gbp(delta);
+
+      // Breakdown table + totals (Scenario B income tax)
       const tbody = document.getElementById("breakdownBody");
       tbody.innerHTML = "";
-      breakdown.forEach(row => {
+      let totalTaxed = 0;
+      B.breakdown.forEach(row => {
+        totalTaxed += row.amount;
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${row.band}</td>
@@ -350,6 +410,8 @@
         `;
         tbody.appendChild(tr);
       });
+      document.getElementById("breakdownTotalTaxed").textContent = gbp(totalTaxed);
+      document.getElementById("breakdownTotalTax").textContent = gbp(B.tax);
 
       document.getElementById("breakdownWrap").style.display = "block";
       document.getElementById("results").style.display = "block";
@@ -357,8 +419,8 @@
 
     document.getElementById("calcBtn").addEventListener("click", calculate);
 
-    // Automatic calculations
-    ["grossIncome", "pension", "otherDeductions", "employerPension"].forEach(id => {
+    // Auto-calc as user types
+    ["grossIncome", "pension", "employerPension"].forEach(id => {
       document.getElementById(id).addEventListener("input", () => {
         if (parseMoney("grossIncome") > 0) calculate();
       });
