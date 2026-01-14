@@ -10,14 +10,13 @@
     .sub { color:#666; font-size: 13px; margin-bottom: 14px; }
     .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin: 12px 0; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
     label { display: block; font-weight: 650; margin-bottom: 6px; }
     input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
     .hint { color: #555; font-size: 13px; margin-top: 6px; }
 
-    .kpi { background:#fafafa; border:1px solid #eee; border-radius:12px; padding: 12px; }
+    .kpi { background:#fafafa; border:1px solid #eee; border-radius:12px; padding: 12px; margin-top: 10px; }
     .kpi .name { color:#666; font-size: 12px; }
-    .kpi .val { font-size: 18px; font-weight: 850; margin-top: 4px; }
+    .kpi .val { font-size: 22px; font-weight: 900; margin-top: 4px; }
 
     .hero { background:#f6f8ff; border:1px solid #dfe6ff; border-radius: 14px; padding: 14px; margin: 12px 0 10px; }
     .hero .big { font-size: 22px; font-weight: 900; margin-top: 4px; }
@@ -26,24 +25,10 @@
     .warn { background:#fff6e5; border:1px solid #ffd08a; padding:10px; border-radius:10px; margin-top:10px; display:none; }
 
     table { width:100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th, td { border-bottom:1px solid #eee; padding: 8px; text-align:left; }
+    th, td { border-bottom:1px solid #eee; padding: 8px; text-align:left; vertical-align: top; }
     th { background:#fafafa; }
     .sectionTitle { margin: 0 0 6px; font-size: 14px; }
-
-    /* Emphasis KPI (red pop) */
-    .kpi.emphasis {
-      border: 2px solid #e5533d;
-      background: #fff5f3;
-    }
-    .kpi.emphasis .name {
-      font-weight: 800;
-      color: #a73525;
-    }
-    .kpi.emphasis .val {
-      font-weight: 950;
-      font-size: 24px;
-      color: #b3261e;
-    }
+    .stack { display: grid; gap: 10px; }
   </style>
 </head>
 
@@ -68,7 +53,7 @@
       <div>
         <label for="employeePension">Employee pension (£/year)</label>
         <input id="employeePension" type="number" min="0" step="100" placeholder="e.g. 60000" />
-        <div class="hint">Hard cap: this tool will not run if employee pension exceeds £60,000 (carry forward ignored).</div>
+        <div class="hint">Hard cap: tool will not run if employee pension exceeds £60,000 (carry forward ignored).</div>
       </div>
     </div>
 
@@ -78,7 +63,7 @@
       <div>
         <label for="employerPension">Employer pension (£/year, optional)</label>
         <input id="employerPension" type="number" min="0" step="100" placeholder="0" />
-        <div class="hint">Included in “true earnings” as additional value generated. Does not reduce Income Tax or employee NI.</div>
+        <div class="hint">Included in “total pay” as additional value generated. Does not reduce Income Tax or employee NI.</div>
       </div>
       <div></div>
     </div>
@@ -88,92 +73,72 @@
   </div>
 
   <div class="hero" id="hero" style="display:none;">
-    <div class="sectionTitle">Difference in true earnings (with pension vs without)</div>
+    <div class="sectionTitle">Difference in total pay (with pension vs without)</div>
     <div class="big" id="heroDelta">£0</div>
     <div class="sub" style="margin:6px 0 0;">
-      True earnings = take-home pay after Income Tax + employee NI, plus pension (employee + employer).
+      Total pay = take-home pay after Income Tax + employee NI, plus pension (employee + employer).
     </div>
   </div>
 
   <div class="card" id="baselineCard" style="display:none;">
     <h3 class="sectionTitle">Scenario 1: No employee pension</h3>
 
-    <div class="grid3">
-      <div class="kpi">
-        <div class="name">Taxable pay</div>
-        <div class="val" id="b_taxable">£0</div>
-      </div>
-      <div class="kpi">
-        <div class="name">Income tax + employee NI</div>
-        <div class="val" id="b_taxni">£0</div>
-      </div>
-      <div class="kpi">
-        <div class="name">Total pay (take-home + pension)</div>
-        <div class="val" id="b_takehome">£0</div>
-      </div>
+    <div class="kpi">
+      <div class="name">Total pay (take-home + pension)</div>
+      <div class="val" id="b_totalPay">£0</div>
     </div>
 
-    <h4 class="sectionTitle" style="margin-top:14px;">Income Tax breakdown</h4>
-    <table>
-      <thead><tr><th>Band</th><th>Amount</th><th>Rate</th><th>Tax</th></tr></thead>
-      <tbody id="b_taxTable"></tbody>
-      <tfoot><tr><th>Total</th><th id="b_taxedTotal">£0</th><th></th><th id="b_taxTotal">£0</th></tr></tfoot>
-    </table>
+    <div class="stack" style="margin-top:12px;">
+      <div>
+        <h4 class="sectionTitle">Income Tax breakdown</h4>
+        <table>
+          <thead><tr><th>Band</th><th>Amount</th><th>Rate</th><th>Tax</th></tr></thead>
+          <tbody id="b_taxTable"></tbody>
+          <tfoot><tr><th>Total</th><th id="b_taxedTotal">£0</th><th></th><th id="b_taxTotal">£0</th></tr></tfoot>
+        </table>
+      </div>
 
-    <h4 class="sectionTitle" style="margin-top:14px;">Employee NI breakdown</h4>
-    <table>
-      <thead><tr><th>Band</th><th>NI-able pay</th><th>Rate</th><th>NI</th></tr></thead>
-      <tbody id="b_niTable"></tbody>
-      <tfoot><tr><th>Total</th><th></th><th></th><th id="b_niTotal">£0</th></tr></tfoot>
-    </table>
-
-    <div class="sub" style="margin-top:10px;">
-      NI uses weekly thresholds and is approximated here by spreading annual pay evenly across 52 weeks.
+      <div>
+        <h4 class="sectionTitle">Employee NI breakdown</h4>
+        <table>
+          <thead><tr><th>Band</th><th>NI-able pay</th><th>Rate</th><th>NI</th></tr></thead>
+          <tbody id="b_niTable"></tbody>
+          <tfoot><tr><th>Total</th><th></th><th></th><th id="b_niTotal">£0</th></tr></tfoot>
+        </table>
+        <div class="sub" style="margin-top:10px;">
+          NI uses weekly thresholds and is approximated here by spreading annual pay evenly across 52 weeks.
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="card" id="pensionCard" style="display:none;">
     <h3 class="sectionTitle">Scenario 2: With pension</h3>
 
-    <div class="grid3">
-      <div class="kpi">
-        <div class="name">Taxable pay</div>
-        <div class="val" id="w_taxable">£0</div>
-      </div>
-      <div class="kpi">
-        <div class="name">Income tax + employee NI</div>
-        <div class="val" id="w_taxni">£0</div>
-      </div>
-      <div class="kpi">
-        <div class="name">Take-home pay</div>
-        <div class="val" id="w_takehome">£0</div>
-      </div>
+    <div class="kpi">
+      <div class="name">Total pay (take-home + pension)</div>
+      <div class="val" id="w_totalPay">£0</div>
     </div>
 
-    <div class="grid2" style="margin-top:10px;">
-      <div class="kpi">
-        <div class="name">Total pension (employee + employer)</div>
-        <div class="val" id="w_pension">£0</div>
+    <div class="stack" style="margin-top:12px;">
+      <div>
+        <h4 class="sectionTitle">Income Tax breakdown</h4>
+        <table>
+          <thead><tr><th>Band</th><th>Amount</th><th>Rate</th><th>Tax</th></tr></thead>
+          <tbody id="w_taxTable"></tbody>
+          <tfoot><tr><th>Total</th><th id="w_taxedTotal">£0</th><th></th><th id="w_taxTotal">£0</th></tr></tfoot>
+        </table>
       </div>
-      <div class="kpi emphasis">
-        <div class="name">Total pay (take-home + pension)</div>
-        <div class="val" id="w_true">£0</div>
+
+      <div>
+        <h4 class="sectionTitle">Employee NI breakdown</h4>
+        <table>
+          <thead><tr><th>Band</th><th>NI-able pay</th><th>Rate</th><th>NI</th></tr></thead>
+          <tbody id="w_niTable"></tbody>
+          <tfoot><tr><th>Total</th><th></th><th></th><th id="w_niTotal">£0</th></tr></tfoot>
+        </table>
       </div>
     </div>
-
-    <h4 class="sectionTitle" style="margin-top:14px;">Income Tax breakdown</h4>
-    <table>
-      <thead><tr><th>Band</th><th>Amount</th><th>Rate</th><th>Tax</th></tr></thead>
-      <tbody id="w_taxTable"></tbody>
-      <tfoot><tr><th>Total</th><th id="w_taxedTotal">£0</th><th></th><th id="w_taxTotal">£0</th></tr></tfoot>
-    </table>
-
-    <h4 class="sectionTitle" style="margin-top:14px;">Employee NI breakdown</h4>
-    <table>
-      <thead><tr><th>Band</th><th>NI-able pay</th><th>Rate</th><th>NI</th></tr></thead>
-      <tbody id="w_niTable"></tbody>
-      <tfoot><tr><th>Total</th><th></th><th></th><th id="w_niTotal">£0</th></tr></tfoot>
-    </table>
   </div>
 
 <script>
@@ -182,9 +147,9 @@ const RULES = {
   paTaperStart: 100000,
   paZeroAt: 125140,
   taxBandsAfterAllowance: [
-    { name: "Basic rate",      from: 0,      to: 37700,   rate: 0.20 },
-    { name: "Higher rate",     from: 37700,  to: 125140,  rate: 0.40 },
-    { name: "Additional rate", from: 125140, to: Infinity,rate: 0.45 }
+    { name: "Basic rate",      from: 0,      to: 37700,    rate: 0.20 },
+    { name: "Higher rate",     from: 37700,  to: 125140,   rate: 0.40 },
+    { name: "Additional rate", from: 125140, to: Infinity, rate: 0.45 }
   ],
   ni: {
     primaryThresholdWeekly: 242,
@@ -211,13 +176,11 @@ function parseMoney(id) {
   return clamp(Number(v));
 }
 
-// Adjusted net income (ANI) – simplified for this tool:
-// ANI ≈ gross income - employee pension (salary sacrifice / net pay)
+// Simplified ANI for this tool: gross - employee pension (salary sacrifice / net pay)
 function calcAdjustedNetIncome(grossIncome, employeePension) {
   return Math.max(0, grossIncome - employeePension);
 }
 
-// Personal Allowance based on ANI
 function calcPersonalAllowanceFromANI(ani) {
   if (ani <= RULES.paTaperStart) return RULES.personalAllowance;
   if (ani >= RULES.paZeroAt) return 0;
@@ -232,17 +195,18 @@ function calcIncomeTax(taxableAfterAllowances) {
 
   for (const b of RULES.taxBandsAfterAllowance) {
     if (remaining <= 0) break;
-    const width = (b.to === Infinity) ? Infinity : (b.to - b.from);
-    const amount = Math.min(remaining, width);
+    const bandWidth = (b.to === Infinity) ? Infinity : (b.to - b.from);
+    const amount = Math.min(remaining, bandWidth);
     const bandTax = amount * b.rate;
+
     breakdown.push({ band: b.name, amount, rate: b.rate, tax: bandTax });
     tax += bandTax;
     remaining -= amount;
   }
+
   return { tax, breakdown };
 }
 
-// Employee NI (Class 1, category A), approximated by even weekly earnings
 function calcEmployeeNI_Annual(annualPay) {
   const weekly = Math.max(0, annualPay) / 52;
 
@@ -264,15 +228,14 @@ function calcEmployeeNI_Annual(annualPay) {
   };
 }
 
-// Tapered annual allowance – simplified for this tool:
-// threshold income ≈ gross (because salary sacrifice is added back)
+// Simplified taper check for this tool:
+// threshold income ≈ gross (salary sacrifice added back)
 // adjusted income ≈ gross + employer pension
 function calcTaperedAnnualAllowance(grossIncome, employeePension, employerPension) {
   const aa = RULES.annualAllowance;
-
   const netIncome = Math.max(0, grossIncome - employeePension);
-  const thresholdIncome = netIncome + employeePension;         // = grossIncome under this model
-  const adjustedIncome  = netIncome + employeePension + employerPension; // = grossIncome + employerPension
+  const thresholdIncome = netIncome + employeePension;              // = gross
+  const adjustedIncome = netIncome + employeePension + employerPension; // = gross + employer pension
 
   let allowance = aa.standard;
   const taperApplies = (thresholdIncome > aa.thresholdIncomeLimit) && (adjustedIncome > aa.adjustedIncomeLimit);
@@ -282,14 +245,13 @@ function calcTaperedAnnualAllowance(grossIncome, employeePension, employerPensio
     allowance = Math.max(aa.minimum, aa.standard - reduction);
   }
 
-  return { netIncome, thresholdIncome, adjustedIncome, allowance };
+  return { netIncome, thresholdIncome, adjustedIncome, allowance, taperApplies };
 }
 
 function renderIncomeTaxTable(tbodyId, totalAmountId, totalTaxId, personalAllowanceUsed, breakdown, totalTax) {
   const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = "";
 
-  // Tax-free row first (not bold)
   const tr0 = document.createElement("tr");
   tr0.innerHTML = `
     <td>Tax-free (Personal Allowance)</td>
@@ -358,20 +320,18 @@ function calculateScenario(grossIncome, employeePension, employerPension) {
 
   const ani = calcAdjustedNetIncome(grossIncome, employeePension);
   const paAvailable = calcPersonalAllowanceFromANI(ani);
-  const paUsed = Math.min(paAvailable, taxablePay);
+  const personalAllowanceUsed = Math.min(paAvailable, taxablePay);
 
-  const taxableAfterAllowances = Math.max(0, taxablePay - paUsed);
+  const taxableAfterAllowances = Math.max(0, taxablePay - personalAllowanceUsed);
   const { tax, breakdown } = calcIncomeTax(taxableAfterAllowances);
 
   const ni = calcEmployeeNI_Annual(taxablePay);
 
-  // Take-home = taxable pay - income tax - employee NI
   const takeHome = taxablePay - tax - ni.annual;
-
   const pensionTotal = employeePension + employerPension;
-  const trueEarnings = takeHome + pensionTotal;
+  const totalPay = takeHome + pensionTotal;
 
-  return { taxablePay, paUsed, tax, breakdown, ni, takeHome, pensionTotal, trueEarnings };
+  return { personalAllowanceUsed, tax, breakdown, ni, totalPay };
 }
 
 function recalc() {
@@ -394,7 +354,6 @@ function recalc() {
     return;
   }
 
-  // Annual allowance check (tapered)
   const taper = calcTaperedAnnualAllowance(grossIncome, employeePension, employerPension);
   const totalPensionSavings = employeePension + employerPension;
 
@@ -416,37 +375,24 @@ function recalc() {
   const base = calculateScenario(grossIncome, 0, employerPension);
   const withP = calculateScenario(grossIncome, employeePension, employerPension);
 
-  // Hero delta
   document.getElementById("heroDelta").textContent =
-    (withP.trueEarnings - base.trueEarnings >= 0 ? "+" : "") + gbp(withP.trueEarnings - base.trueEarnings);
-
+    (withP.totalPay - base.totalPay >= 0 ? "+" : "") + gbp(withP.totalPay - base.totalPay);
   document.getElementById("hero").style.display = "block";
 
   // Scenario 1
-  document.getElementById("b_taxable").textContent = gbp(base.taxablePay);
-  document.getElementById("b_taxni").textContent = gbp(base.tax + base.ni.annual);
-  document.getElementById("b_takehome").textContent = gbp(base.takeHome);
-
-  renderIncomeTaxTable("b_taxTable", "b_taxedTotal", "b_taxTotal", base.paUsed, base.breakdown, base.tax);
+  document.getElementById("b_totalPay").textContent = gbp(base.totalPay);
+  renderIncomeTaxTable("b_taxTable", "b_taxedTotal", "b_taxTotal", base.personalAllowanceUsed, base.breakdown, base.tax);
   renderNITable("b_niTable", "b_niTotal", base.ni);
-
   document.getElementById("baselineCard").style.display = "block";
 
   // Scenario 2
-  document.getElementById("w_taxable").textContent = gbp(withP.taxablePay);
-  document.getElementById("w_taxni").textContent = gbp(withP.tax + withP.ni.annual);
-  document.getElementById("w_takehome").textContent = gbp(withP.takeHome);
-
-  document.getElementById("w_pension").textContent = gbp(withP.pensionTotal);
-  document.getElementById("w_true").textContent = gbp(withP.trueEarnings);
-
-  renderIncomeTaxTable("w_taxTable", "w_taxedTotal", "w_taxTotal", withP.paUsed, withP.breakdown, withP.tax);
+  document.getElementById("w_totalPay").textContent = gbp(withP.totalPay);
+  renderIncomeTaxTable("w_taxTable", "w_taxedTotal", "w_taxTotal", withP.personalAllowanceUsed, withP.breakdown, withP.tax);
   renderNITable("w_niTable", "w_niTotal", withP.ni);
-
   document.getElementById("pensionCard").style.display = "block";
 }
 
-["grossIncome", "employeePension", "employerPension"].forEach(id => {
+["grossIncome","employeePension","employerPension"].forEach(id => {
   document.getElementById(id).addEventListener("input", recalc);
 });
 </script>
