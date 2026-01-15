@@ -28,7 +28,7 @@
     .stack { display: grid; gap: 10px; }
 
     .tableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width:100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; min-width: 640px; }
+    table { width:100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; min-width: 760px; }
     th, td { border-bottom:1px solid #eee; padding: 8px; text-align:left; vertical-align: top; white-space: nowrap; }
     th { background:#fafafa; }
 
@@ -36,12 +36,11 @@
     .calcEq { font-size: 13px; color:#333; }
     .calcNums { font-size: 13px; color:#555; margin-top:6px; word-break: break-word; }
 
-    /* Mobile friendliness */
     @media (max-width: 720px) {
       body { margin: 18px auto; }
       .card { padding: 12px; }
       .grid2 { grid-template-columns: 1fr; }
-      table { min-width: 560px; }
+      table { min-width: 820px; } /* force scroll instead of squish/overlap */
     }
   </style>
 </head>
@@ -77,7 +76,7 @@
       <div>
         <label for="employerPension">Employer pension (£/year, optional)</label>
         <input id="employerPension" type="number" min="0" step="100" placeholder="0" />
-        <div class="hint">Included in “Total earned and invested”. Does not reduce Income Tax or employee NI.</div>
+        <div class="hint">Included in “Total earned + invested”. Does not reduce Income Tax or employee NI.</div>
       </div>
       <div></div>
     </div>
@@ -87,10 +86,10 @@
   </div>
 
   <div class="hero" id="hero" style="display:none;">
-    <div class="sectionTitle">Difference in Total earned and invested (with pension vs without)</div>
+    <div class="sectionTitle">Difference in total earned + invested (with pension vs without)</div>
     <div class="big" id="heroDelta">£0</div>
     <div class="sub" style="margin:6px 0 0;">
-      Total earned and invested = take-home pay after Income Tax + employee NI, plus pension (employee + employer).
+      Total earned + invested = take-home cash after Income Tax + employee NI, plus pension (employee + employer).
     </div>
   </div>
 
@@ -98,13 +97,13 @@
     <h3 class="sectionTitle">Scenario 1: No pension</h3>
 
     <div class="kpi">
-      <div class="name">Total earned and invested</div>
-      <div class="val" id="b_totalEarnedInvested">£0</div>
+      <div class="name">Take-home cash</div>
+      <div class="val" id="b_takeHomeKpi">£0</div>
     </div>
 
     <div class="stack" style="margin-top:12px;">
       <div>
-        <h4 class="sectionTitle">Breakdown</h4>
+        <h4 class="sectionTitle">Income Tax breakdown</h4>
         <div class="tableWrap">
           <table>
             <thead>
@@ -130,13 +129,13 @@
         </div>
 
         <div class="calcBox">
-          <div class="sectionTitle" style="margin:0 0 6px;">Total Pay calculation</div>
-          <div class="calcEq">Total earned and invested = taxable income − income tax − NI contributions + pension contributions</div>
+          <div class="sectionTitle" style="margin:0 0 6px;">Total earned + invested calculation</div>
+          <div class="calcEq">Total earned + invested = taxable income − income tax − NI contributions + pension contributions</div>
           <div class="calcNums" id="b_calcNums">£0 = £0 − £0 − £0 + £0</div>
         </div>
 
         <div class="sub" style="margin-top:10px;">
-          NI uses weekly thresholds and is approximated here by spreading annual pay evenly across 52 weeks.
+          NI uses weekly thresholds and is approximated by spreading annual pay evenly across 52 weeks.
         </div>
       </div>
     </div>
@@ -146,13 +145,13 @@
     <h3 class="sectionTitle">Scenario 2: With pension</h3>
 
     <div class="kpi">
-      <div class="name">Total earned and invested</div>
-      <div class="val" id="w_totalEarnedInvested">£0</div>
+      <div class="name">Total earned + invested (cash + pension)</div>
+      <div class="val" id="w_totalKpi">£0</div>
     </div>
 
     <div class="stack" style="margin-top:12px;">
       <div>
-        <h4 class="sectionTitle">Breakdown</h4>
+        <h4 class="sectionTitle">Income Tax breakdown</h4>
         <div class="tableWrap">
           <table>
             <thead>
@@ -163,7 +162,7 @@
                 <th>Employee NI</th>
                 <th>Take-home</th>
                 <th>Invested in pension</th>
-                <th>Total earned and invested</th>
+                <th>Total earned + invested</th>
               </tr>
             </thead>
             <tbody id="w_tableBody"></tbody>
@@ -182,8 +181,8 @@
         </div>
 
         <div class="calcBox">
-          <div class="sectionTitle" style="margin:0 0 6px;">Total Pay calculation</div>
-          <div class="calcEq">Total earned and invested = taxable income − income tax − NI contributions + pension contributions</div>
+          <div class="sectionTitle" style="margin:0 0 6px;">Total earned + invested calculation</div>
+          <div class="calcEq">Total earned + invested = taxable income − income tax − NI contributions + pension contributions</div>
           <div class="calcNums" id="w_calcNums">£0 = £0 − £0 − £0 + £0</div>
         </div>
       </div>
@@ -310,7 +309,7 @@ function clearError() {
 }
 
 function calculateScenario(grossIncome, employeePension, employerPension) {
-  // "Taxable income" here means taxable pay after employee pension (salary sacrifice/net pay assumption)
+  // taxable income here = pay after employee pension (salary sacrifice/net pay assumption)
   const taxableIncome = Math.max(0, grossIncome - employeePension);
 
   const ani = calcAdjustedNetIncome(grossIncome, employeePension);
@@ -326,23 +325,14 @@ function calculateScenario(grossIncome, employeePension, employerPension) {
   const pensionTotal = employeePension + employerPension;
   const totalEarnedInvested = takeHome + pensionTotal;
 
-  return {
-    taxableIncome,
-    personalAllowanceUsed,
-    tax,
-    breakdown,
-    ni,
-    takeHome,
-    pensionTotal,
-    totalEarnedInvested
-  };
+  return { taxableIncome, personalAllowanceUsed, tax, breakdown, ni, takeHome, pensionTotal, totalEarnedInvested };
 }
 
-function renderScenario1Table(s, tbodyId) {
-  const tbody = document.getElementById(tbodyId);
+function renderScenario1Table(s) {
+  const tbody = document.getElementById("b_tableBody");
   tbody.innerHTML = "";
 
-  // Row: Tax-free allowance used
+  // Show tax-free line as a row to avoid confusion (income tax only).
   const tr0 = document.createElement("tr");
   tr0.innerHTML = `
     <td>Tax-free (Personal Allowance)</td>
@@ -353,7 +343,7 @@ function renderScenario1Table(s, tbodyId) {
   `;
   tbody.appendChild(tr0);
 
-  // Rows: tax bands
+  // Income tax bands (income tax only; NI is shown in totals row).
   s.breakdown.forEach(row => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -366,15 +356,14 @@ function renderScenario1Table(s, tbodyId) {
     tbody.appendChild(tr);
   });
 
-  // Totals
   document.getElementById("b_incomeTotal").textContent = gbp(s.taxableIncome);
   document.getElementById("b_taxTotal").textContent = gbp(s.tax);
   document.getElementById("b_niTotal").textContent = gbp(s.ni);
   document.getElementById("b_takeHomeTotal").textContent = gbp(s.takeHome);
 }
 
-function renderScenario2Table(s, tbodyId) {
-  const tbody = document.getElementById(tbodyId);
+function renderScenario2Table(s) {
+  const tbody = document.getElementById("w_tableBody");
   tbody.innerHTML = "";
 
   const tr0 = document.createElement("tr");
@@ -403,7 +392,6 @@ function renderScenario2Table(s, tbodyId) {
     tbody.appendChild(tr);
   });
 
-  // Totals
   document.getElementById("w_incomeTotal").textContent = gbp(s.taxableIncome);
   document.getElementById("w_taxTotal").textContent = gbp(s.tax);
   document.getElementById("w_niTotal").textContent = gbp(s.ni);
@@ -460,15 +448,15 @@ function recalc() {
   document.getElementById("hero").style.display = "block";
 
   // Scenario 1 KPI + table
-  document.getElementById("b_totalEarnedInvested").textContent = gbp(base.totalEarnedInvested);
-  renderScenario1Table(base, "b_tableBody");
+  document.getElementById("b_takeHomeKpi").textContent = gbp(base.takeHome);
+  renderScenario1Table(base);
   document.getElementById("b_calcNums").textContent =
     `${gbp(base.totalEarnedInvested)} = ${gbp(base.taxableIncome)} − ${gbp(base.tax)} − ${gbp(base.ni)} + ${gbp(base.pensionTotal)}`;
   document.getElementById("baselineCard").style.display = "block";
 
   // Scenario 2 KPI + table
-  document.getElementById("w_totalEarnedInvested").textContent = gbp(withP.totalEarnedInvested);
-  renderScenario2Table(withP, "w_tableBody");
+  document.getElementById("w_totalKpi").textContent = gbp(withP.totalEarnedInvested);
+  renderScenario2Table(withP);
   document.getElementById("w_calcNums").textContent =
     `${gbp(withP.totalEarnedInvested)} = ${gbp(withP.taxableIncome)} − ${gbp(withP.tax)} − ${gbp(withP.ni)} + ${gbp(withP.pensionTotal)}`;
   document.getElementById("pensionCard").style.display = "block";
